@@ -1,3 +1,4 @@
+#![flux::ignore(no)]
 //! A priority queue implemented with a binary heap.
 //!
 //! Insertion and popping the largest element have *O*(log n) time complexity.
@@ -491,6 +492,7 @@ where
         self.sift_up(start, pos);
     }
 
+    #[flux::trusted]
     fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         unsafe {
             // Take out the value at `pos` and create a hole.

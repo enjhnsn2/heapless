@@ -1,4 +1,5 @@
 //! A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
+#![flux::ignore(no)]
 
 use core::{
     borrow,
@@ -60,6 +61,7 @@ mod storage {
     /// [`Vec`]: super::Vec
     /// [`VecView`]: super::VecView
     #[allow(private_bounds)]
+    #[flux::assoc(fn cap(s: Self) -> int)]
     pub trait VecStorage<T>: VecSealedStorage<T> {}
 
     pub trait VecSealedStorage<T> {
@@ -99,6 +101,9 @@ mod storage {
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
     #[cfg_attr(feature = "zeroize", derive(Zeroize))]
+    #[flux::opaque]
+    #[flux::refined_by(cap: int)]
+    #[flux::invariant(cap > 0)]
     pub struct VecStorageInner<T: ?Sized> {
         pub(crate) buffer: T,
     }
@@ -159,6 +164,7 @@ mod storage {
             this
         }
     }
+    #[flux::assoc(fn cap(s: Self) -> int { N })]
     impl<T, const N: usize> VecStorage<T> for OwnedVecStorage<T, N> {}
 
     impl<T> VecSealedStorage<T> for ViewVecStorage<T> {
@@ -211,6 +217,7 @@ mod storage {
             this
         }
     }
+    #[flux::assoc(fn cap(s: Self) -> int { s })]
     impl<T> VecStorage<T> for ViewVecStorage<T> {}
 }
 pub use storage::{OwnedVecStorage, VecStorage, ViewVecStorage};

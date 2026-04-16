@@ -1,3 +1,4 @@
+#![flux::trusted] 
 //! Memory and object pools
 //!
 //! # Target support

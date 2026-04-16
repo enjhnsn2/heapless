@@ -1,3 +1,4 @@
+#![flux::ignore(no)]
 use core::{
     fmt::{Debug, Display},
     mem,

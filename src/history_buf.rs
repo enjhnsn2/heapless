@@ -107,12 +107,14 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
         }
+        #[flux_rs::trusted]
         fn as_hist_buf_view(this: &HistoryBufInner<T, Self>) -> &HistoryBufView<T>
         where
             Self: HistoryBufStorage<T>,
         {
             this
         }
+        #[flux_rs::trusted]
         fn as_hist_buf_mut_view(this: &mut HistoryBufInner<T, Self>) -> &mut HistoryBufView<T>
         where
             Self: HistoryBufStorage<T>,

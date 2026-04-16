@@ -1,3 +1,4 @@
+#![flux::trusted] 
 //! A fixed-capacity hash table where the iteration order is independent of the hash of the keys.
 use core::{
     borrow::Borrow,
@@ -178,6 +179,7 @@ where
         Self::capacity() - 1
     }
 
+    #[flux_rs::trusted]
     fn find<Q>(&self, hash: HashValue, query: &Q) -> Option<(usize, usize)>
     where
         K: Borrow<Q>,
@@ -281,6 +283,7 @@ where
         });
     }
 
+    #[flux_rs::trusted]
     fn remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
         // index `probe` and entry `found` is to be removed
         // use swap_remove, but then we need to update the index that points
@@ -354,6 +357,7 @@ where
         }
     }
 
+    #[flux_rs::trusted]
     fn backward_shift_after_removal(&mut self, probe_at_remove: usize) {
         // backward shift deletion in self.indices
         // after probe, shift all non-ideally placed indices backward
@@ -658,6 +662,7 @@ where
 
     /// Inserts this entry into to underlying map, yields a mutable reference to the inserted value.
     /// If the map is at capacity the value is returned instead.
+    #[flux_rs::trusted]
     pub fn insert(self, value: V) -> Result<&'a mut V, V> {
         if self.core.entries.is_full() {
             Err(value)

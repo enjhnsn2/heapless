@@ -1,3 +1,4 @@
+#![flux::ignore(no)]
 //! A fixed capacity double-ended queue.
 //!
 //! # Examples
@@ -54,17 +55,24 @@ use zeroize::Zeroize;
 /// In most cases you should use [`Deque`] or [`DequeView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
+#[flux::refined_by(front: int, back: int, buf: S)]
+#[flux::invariant(<S as VecStorage<T>>::cap(buf) > 0)]
+#[flux::invariant(0 <= front && front < <S as VecStorage<T>>::cap(buf))]
+#[flux::invariant(0 <= back && back < <S as VecStorage<T>>::cap(buf))]
 pub struct DequeInner<T, S: VecStorage<T> + ?Sized> {
     // This phantomdata is required because otherwise rustc thinks that `T` is not used
     phantom: PhantomData<T>,
     /// Front index. Always 0..=(N-1)
+    #[flux::field(usize[front])]
     front: usize,
     /// Back index. Always 0..=(N-1).
+    #[flux::field(usize[back])]
     back: usize,
 
     /// Used to distinguish "empty" and "full" cases when `front == back`.
     /// May only be `true` if `front == back`, always `false` otherwise.
     full: bool,
+    #[flux::field(S[buf])]
     buffer: S,
 }
 
@@ -159,6 +167,8 @@ impl<T, const N: usize> Deque<T, N> {
     /// // allocate the deque in a static variable
     /// static mut X: Deque<u8, 16> = Deque::new();
     /// ```
+    #[flux::trusted]
+    #[flux::sig(fn() -> Deque<T, N>[0, 0, N])]
     pub const fn new() -> Self {
         const {
             assert!(N > 0);
@@ -187,6 +197,8 @@ impl<T, const N: usize> Deque<T, N> {
     ///
     /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len)
     /// instead.
+    #[flux::trusted]
+    #[flux::sig(fn(&Deque<T, N>[@f, @b, @c]) -> usize{v: 0 <= v && v <= c})]
     pub const fn len(&self) -> usize {
         if self.full {
             N
@@ -210,10 +222,13 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     }
 
     /// Returns the maximum number of elements the deque can hold.
+    #[flux::trusted]
+    #[flux::sig(fn(&DequeInner<T, S>[@f, @b, @buf]) -> usize[<S as VecStorage<T>>::cap(buf)])]
     pub fn storage_capacity(&self) -> usize {
         self.buffer.borrow().len()
     }
 
+    #[flux::sig(fn(&DequeInner<T, S>[@f, @b, @buf], i: usize{0 <= i && i < <S as VecStorage<T>>::cap(buf)}) -> usize{v: 0 <= v && v < <S as VecStorage<T>>::cap(buf)})]
     fn increment(&self, i: usize) -> usize {
         if i + 1 == self.storage_capacity() {
             0
@@ -222,6 +237,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         }
     }
 
+    #[flux::sig(fn(&DequeInner<T, S>[@f, @b, @buf], i: usize{0 <= i && i < <S as VecStorage<T>>::cap(buf)}) -> usize{v: 0 <= v && v < <S as VecStorage<T>>::cap(buf)})]
     fn decrement(&self, i: usize) -> usize {
         if i == 0 {
             self.storage_capacity() - 1
@@ -231,6 +247,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     }
 
     /// Returns the number of elements currently in the deque.
+    #[flux::trusted]
+    #[flux::sig(fn(&DequeInner<T, S>[@f, @b, @buf]) -> usize{v: 0 <= v && v <= <S as VecStorage<T>>::cap(buf)})]
     pub fn storage_len(&self) -> usize {
         if self.full {
             self.storage_capacity()
@@ -245,6 +263,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     pub fn clear(&mut self) {
         struct Guard<'a, T, S: VecStorage<T> + ?Sized>(&'a mut DequeInner<T, S>);
         impl<'a, T, S: VecStorage<T> + ?Sized> Drop for Guard<'a, T, S> {
+            #[flux::trusted]
             fn drop(&mut self) {
                 self.0.front = 0;
                 self.0.back = 0;
@@ -304,6 +323,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     }
 
     /// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.
+    #[flux::trusted]
     pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
         let ptr = self.buffer.borrow_mut().as_mut_ptr();
 
@@ -366,6 +386,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// buf.make_contiguous().sort_by(|a, b| b.cmp(a));
     /// assert_eq!(buf.as_slices(), (&[3, 2, 1][..], &[][..]));
     /// ```
+    #[flux::trusted]
     pub fn make_contiguous(&mut self) -> &mut [T] {
         if self.is_contiguous() {
             return unsafe {
@@ -522,6 +543,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     }
 
     /// Provides a mutable reference to the front element, or None if the `Deque` is empty.
+    #[flux::trusted]
     pub fn front_mut(&mut self) -> Option<&mut T> {
         if self.is_empty() {
             None
@@ -547,6 +569,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     }
 
     /// Provides a mutable reference to the back element, or None if the `Deque` is empty.
+    #[flux::trusted]
     pub fn back_mut(&mut self) -> Option<&mut T> {
         if self.is_empty() {
             None
@@ -610,6 +633,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// It's undefined behavior to call this on an empty deque
+    #[flux::trusted]
     pub unsafe fn pop_front_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
@@ -629,6 +653,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// It's undefined behavior to call this on an empty deque
+    #[flux::trusted]
     pub unsafe fn pop_back_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
@@ -646,6 +671,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// This assumes the deque is not full.
+    #[flux::trusted]
     pub unsafe fn push_front_unchecked(&mut self, item: T) {
         debug_assert!(!self.is_full());
 
@@ -664,6 +690,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// This assumes the deque is not full.
+    #[flux::trusted]
     pub unsafe fn push_back_unchecked(&mut self, item: T) {
         debug_assert!(!self.is_full());
 
@@ -741,6 +768,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Returns a mutable reference to the element at the given index.
     ///
     /// Index 0 is the front of the `Deque`.
+    #[flux::trusted]
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         if index < self.storage_len() {
             let idx = self.to_physical_index(index);
@@ -772,6 +800,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// The element at the given `index` must exist (i.e. `index < self.len()`).
+    #[flux::trusted]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
         debug_assert!(index < self.storage_len());
 
@@ -799,6 +828,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// # Safety
     ///
     /// Elements at indexes `i` and `j` must exist (i.e. `i < self.len()` and `j < self.len()`).
+    #[flux::trusted]
     pub unsafe fn swap_unchecked(&mut self, i: usize, j: usize) {
         debug_assert!(i < self.storage_len());
         debug_assert!(j < self.storage_len());
@@ -852,6 +882,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         }
     }
 
+    #[flux::sig(fn(&DequeInner<T, S>[@f, @b, @buf], index: usize{index < <S as VecStorage<T>>::cap(buf)}) -> usize{v: v < <S as VecStorage<T>>::cap(buf)})]
     fn to_physical_index(&self, index: usize) -> usize {
         let mut res = self.front + index;
         if res >= self.storage_capacity() {
@@ -894,6 +925,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// buf.truncate(1);
     /// assert_eq!(buf.make_contiguous(), [5]);
     /// ```
+    #[flux::trusted]
     pub fn truncate(&mut self, len: usize) {
         /// Runs the destructor for all items in the slice when it gets dropped (gracefully or
         /// during unwinding).
@@ -1226,6 +1258,7 @@ where
     S1: VecStorage<T> + ?Sized,
     S2: VecStorage<T> + ?Sized,
 {
+    #[flux::trusted]
     fn eq(&self, other: &DequeInner<T, S2>) -> bool {
         if self.storage_len() != other.storage_len() {
             return false;
@@ -1286,6 +1319,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// Converts a `[T; NS]` array into a `Deque<T, ND>`.
     ///
     /// Returns back the `value` if NS > ND.
+    #[flux::trusted]
     fn try_from(value: [T; NS]) -> Result<Self, Self::Error> {
         if NS > ND {
             return Err((CapacityError, value));

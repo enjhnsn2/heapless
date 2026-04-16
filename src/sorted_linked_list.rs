@@ -1,3 +1,4 @@
+#![flux::trusted] 
 //! A fixed sorted priority linked list, similar to [`BinaryHeap`] but with different properties
 //! on `push`, `pop`, etc.
 //!

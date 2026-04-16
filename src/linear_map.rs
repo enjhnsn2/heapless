@@ -1,3 +1,4 @@
+#![flux::trusted] 
 //! A fixed capacity map/dictionary that performs lookups via linear search.
 //!
 //! Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
@@ -9,6 +10,7 @@ use zeroize::Zeroize;
 
 use crate::vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage};
 
+#[flux_rs::trusted]
 mod storage {
     use crate::vec::{OwnedVecStorage, VecStorage, ViewVecStorage};
 
@@ -132,6 +134,7 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     }
 }
 
+#[flux_rs::trusted]
 impl<K, V, S: LinearMapStorage<K, V> + ?Sized> LinearMapInner<K, V, S>
 where
     K: Eq,
@@ -677,7 +680,7 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
 }
-
+#[flux_rs::trusted]
 impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
@@ -685,7 +688,7 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
         self.iter.next().map(|(k, v)| (k as &K, v))
     }
 }
-
+#[flux_rs::trusted]
 impl<K, V1, V2, S1: LinearMapStorage<K, V1> + ?Sized, S2: LinearMapStorage<K, V2> + ?Sized>
     PartialEq<LinearMapInner<K, V2, S2>> for LinearMapInner<K, V1, S1>
 where
@@ -723,6 +726,7 @@ pub struct OccupiedEntry<'a, K, V> {
     map: &'a mut LinearMapView<K, V>,
 }
 
+#[flux_rs::trusted]
 impl<'a, K, V> OccupiedEntry<'a, K, V>
 where
     K: Eq,

@@ -1,3 +1,4 @@
+#![flux::ignore] 
 //! `static` friendly data structures that don't require dynamic memory allocation
 //!
 //! The core principle behind `heapless` is that its data structures are backed by a *static* memory
@@ -174,7 +175,9 @@ mod len_type;
 pub mod linear_map;
 mod slice;
 pub mod storage;
+#[flux::trusted] 
 pub mod string;
+#[flux::trusted] 
 pub mod vec;
 
 // FIXME: Workaround a compiler ICE in rust 1.83 to 1.86
@@ -243,12 +246,15 @@ pub mod _export {
 /// The error type for fallible [`Vec`] and [`String`] methods.
 #[derive(Debug, Default)]
 #[non_exhaustive]
+#[flux::ignore(no)]
 pub struct CapacityError;
 
+#[flux::ignore(no)]
 impl core::fmt::Display for CapacityError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("insufficient capacity")
     }
 }
 
+#[flux::ignore(no)]
 impl core::error::Error for CapacityError {}

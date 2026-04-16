@@ -1,3 +1,4 @@
+#![flux::trusted] 
 use crate::{
     c_string::{self, CString},
     len_type::LenType,

@@ -1,3 +1,4 @@
+#![flux::trusted] 
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
